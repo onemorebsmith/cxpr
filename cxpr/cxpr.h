@@ -10,6 +10,11 @@
 
 #endif
 
+//////////////////////////////////////////////////////////////////////////
+// Required library includes
+#include <algorithm>
+#include <type_traits>
+
 namespace cxpr
 {
 	using hash_t = unsigned long long;

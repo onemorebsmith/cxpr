@@ -42,16 +42,9 @@ namespace cxpr
 	template <typename T>
 	constexpr void swap(T& t1, T& t2)
 	{
-		if constexpr (std::is_move_assignable_v<T>)
-		{
-			T temp = std::move(t1);
-			t1 = std::move(t2);
-			t2 = std::move(temp);
-		}
-		else
-		{
-			static_assert(false, "non-cxpr-swappable");
-		}
+		T temp = std::move(t1);
+		t1 = std::move(t2);
+		t2 = std::move(temp);
 	}
 
 	//////////////////////////////////////////////////////////////////////////
@@ -94,7 +87,6 @@ namespace cxpr
 	template<class ForwardIt, class T>
 	[[nodiscard]] constexpr ForwardIt lower_bound(ForwardIt first, ForwardIt last, const T& value)
 	{
-		ForwardIt it = {};
 		auto count = std::distance(first, last);
 		while (count > 0) 
 		{

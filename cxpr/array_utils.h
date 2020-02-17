@@ -24,7 +24,7 @@ namespace cxpr
 	template<typename T>
 	constexpr decltype(auto) std_array_size(const T* a = nullptr) noexcept
 	{
-		return __impl::__std_array_size(a);
+		return __detail::__std_array_size(a);
 	}
 
 

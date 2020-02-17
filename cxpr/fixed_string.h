@@ -4,13 +4,18 @@
 
 namespace cxpr
 {
+	namespace __detail
+	{
+		template <typename char_t>
+		static constexpr char_t offset_v = char_t('Z') - char_t('z');
+	}
+
 	template <typename char_t>
 	[[nodiscard]] constexpr char_t cx_tolower(char_t in) noexcept
 	{
-		static constexpr char_t offset = char_t('Z') - char_t('z');
 		if ((in <= 'Z') && (in >= 'A'))
 		{
-			in -= offset;
+			in -= __detail::offset_v<char_t>;
 		}
 
 		return in;
@@ -19,11 +24,9 @@ namespace cxpr
 	template <typename char_t>
 	[[nodiscard]] constexpr char_t cx_toupper(char_t in) noexcept
 	{
-		static constexpr char_t offset = char_t('Z') - char_t('z');
 		if ((in <= 'z') && (in >= 'a'))
 		{
-			constexpr int offset = ('z' - 'Z');
-			in -= offset;
+			in += __detail::offset_v<char_t>;
 		}
 
 		return in;
@@ -50,17 +53,6 @@ namespace cxpr
 		}
 
 		return hash;
-	}
-
-	//////////////////////////////////////////////////////////////////////////
-
-	constexpr size_t cx_strlen(const char* in) noexcept
-	{
-		const char* ptr = in;
-		size_t sz = 0;
-		while (*ptr != '\0') { ptr++; }
-
-		return ptr - in;
 	}
 
 	//////////////////////////////////////////////////////////////////////////
@@ -249,15 +241,13 @@ namespace cxpr
 	template <typename transform_t = no_transform, size_t n>
 	constexpr decltype(auto) make_fixed_string(const char(&in)[n])
 	{
-		static constexpr size_t rounded = cxpr::round_pow_2_v<n>;
-		return basic_fixed_string<char, rounded, transform_t>(in);
+		return basic_fixed_string<char, cxpr::round_pow_2_v<n>, transform_t>(in);
 	}
 
 	template <typename transform_t = no_transform, size_t n>
 	constexpr decltype(auto) make_wfixed_string(const wchar_t(&in)[n])
 	{
-		static constexpr size_t rounded = cxpr::round_pow_2_v<n>;
-		return basic_fixed_string<wchar_t, rounded, transform_t>(in);
+		return basic_fixed_string<wchar_t, cxpr::round_pow_2_v<n>, transform_t>(in);
 	}
 
 	//////////////////////////////////////////////////////////////////////////

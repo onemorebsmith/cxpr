@@ -63,9 +63,8 @@ TEST(fixed_string_tests, char_constructor_tests)
 TEST(fixed_string_tests, wchar_constructor_tests)
 {
 	{	// basic
-		auto ss = cxpr::make_wfixed_string(L"Brandon");
-		std::wstring cppStr = L"Brandon";
-		auto sz = sizeof(ss);
+		auto ss = cxpr::make_wfixed_string(L"StrinGs");
+		std::wstring cppStr = L"StrinGs";
 		EXPECT_EQ(ss, cppStr);
 		EXPECT_EQ(ss.size(), cppStr.size());
 	}
@@ -73,7 +72,6 @@ TEST(fixed_string_tests, wchar_constructor_tests)
 	{	// lower transform
 		auto ss = cxpr::make_wfixed_string<cxpr::lower_case>(L"StRIngs are COOL 12345 %@$%");
 		std::wstring cppStr = L"strings are cool 12345 %@$%";
-		auto sz = sizeof(ss);
 		EXPECT_EQ(ss, cppStr);
 		EXPECT_EQ(ss.size(), cppStr.size());
 	}
@@ -81,7 +79,6 @@ TEST(fixed_string_tests, wchar_constructor_tests)
 	{	// upper transform
 		auto ss = cxpr::make_wfixed_string<cxpr::upper_case>(L"striNGs aRe cooL 12345 %@$%");
 		std::wstring cppStr = L"STRINGS ARE COOL 12345 %@$%";
-		auto sz = sizeof(ss);
 		EXPECT_EQ(ss, cppStr);
 		EXPECT_EQ(ss.size(), cppStr.size());
 	}

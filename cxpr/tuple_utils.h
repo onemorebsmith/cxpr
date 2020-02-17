@@ -67,7 +67,7 @@ namespace cxpr
 				}
 				else
 				{
-					static_assert(false, "Tuple does not contain type");
+					//static_assert(false, "Tuple does not contain type");
 					throw std::logic_error{ "Tuple does not contain type" }; // not real, this will stop the compile
 				}
 			}
@@ -112,6 +112,26 @@ namespace cxpr
 		return __detail::_visit_tuple_capture<functor_t, tuple_t, decltype(ret), 0>(fun, tt, std::move(ret));
 	}
 
+	struct starter_marker {};
+	using type_collector = typeset<starter_marker>;
+
+	template<template<typename ...> class typeset_t,
+		template<typename ...> class right_t,
+		typename ... collapsed_ts,
+		typename ... right_ts>
+		decltype(auto) operator<<(const typeset_t<collapsed_ts...>, const right_t<right_ts...>*)
+	{
+		if constexpr (std::is_same_v<typeset_t<collapsed_ts...>, type_collector>)
+		{	// collapsed_ts is just the marker type, ignore it and just take the right side
+			return typeset<right_ts...>{};
+		}
+		else
+		{
+			// we're rolling now, take both sides 
+			return typeset<collapsed_ts..., right_ts...>{};
+		}
+	}
+
 	//////////////////////////////////////////////////////////////////////////
 
 	namespace __detail
@@ -126,7 +146,7 @@ namespace cxpr
 			static constexpr decltype(auto) iterate(typeset<out_ts...>* output = nullptr)
 			{
 				// check if any types are the same as the current type, if so skip it 
-				static constexpr bool type_exists = (... || std::is_same_v<std::decay<curr_t>, std::decay<out_ts>>);
+				constexpr bool type_exists = (... || std::is_same_v<std::decay<curr_t>, std::decay<out_ts>>);
 				if constexpr (type_exists == false)
 				{
 					return unique_types<Ts...>::iterate((typeset<out_ts..., curr_t>*)0);
@@ -174,25 +194,8 @@ namespace cxpr
 			return typeset<mutator_t<types_t>...>{};
 		}
 
-		struct starter_marker {};
-		using type_collector = typeset<starter_marker>;
 
-		template<template<typename ...> class typeset_t,
-			template<typename ...> class right_t,
-			typename ... collapsed_ts,
-			typename ... right_ts>
-			decltype(auto) operator<<(const typeset_t<collapsed_ts...>, const right_t<right_ts...>*)
-		{
-			if constexpr(std::is_same_v<typeset_t<collapsed_ts...>, type_collector>)
-			{	// collapsed_ts is just the marker type, ignore it and just take the right side
-				return typeset<right_ts...>{};
-			}
-			else
-			{
-				// we're rolling now, take both sides 
-				return typeset<collapsed_ts..., right_ts...>{};
-			}
-		}
+		
 
 		template <typename ... wrapped_types_t>
 		constexpr decltype(auto) collapse_types(wrapped_types_t*... types)

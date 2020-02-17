@@ -111,7 +111,7 @@ TEST(static_map_tests, functor_test)
 		//{
 		//	entry->second(&data, outStream);
 		//}
-		constexpr auto& entry = created.get_entry<cxpr::typehash_v<clean_type>>();
+		constexpr auto entry = created.get_entry<cxpr::typehash_v<clean_type>>();
 		if constexpr (entry.first)
 		{
 			std::invoke(*(entry.second), &data, outStream);
@@ -143,7 +143,6 @@ TEST(static_map_tests, functor_test_fold)
 {
 	// same as functor_test but using folds to generate the table
 	using supported_types_t = cxpr::typeset<double, int, std::string, float>;
-	using functor_t = typename dispatcher_test<int>::functor_t;
 	constexpr static auto jump_table = cxpr::fold<table_fold_generator>(supported_types_t{});
 
 	const auto testData = std::make_tuple<int, double, float, char, std::string, 
@@ -156,7 +155,7 @@ TEST(static_map_tests, functor_test_fold)
 	cxpr::visit_tuple([&](const auto& data) constexpr
 	{
 		using clean_type = std::decay_t<decltype(data)>;
-		constexpr auto& entry = jump_table.get_entry<cxpr::typehash_v<clean_type>>();
+		constexpr auto entry = jump_table.get_entry<cxpr::typehash_v<clean_type>>();
 		if constexpr (entry.first)
 		{
 			std::invoke(*(entry.second), &data, outStream);

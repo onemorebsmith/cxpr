@@ -34,7 +34,6 @@ TEST(tuple_tests, visit_tuple_pack_test)
 {
 	{	// basic visit
 		std::tuple<int, double, float> tt(10, 123.456, -69.0f);
-		auto counter = 0;
 		auto res = cxpr::visit_tuple_capture([&](auto vv)
 		{
 			return vv;
@@ -76,7 +75,6 @@ TEST(tuple_tests, unique_type_test)
 
 	using stripped_t = std::tuple<std::string&&, const int, const double*, int>;
 	using stripped_res_t = cxpr::mutate_types_t<stripped_t, std::decay_t>;
-	stripped_res_t res = {};
 
 	static_assert(std::is_same_v<cxpr::typeset<std::string, int, double const*, int>, stripped_res_t>,
 		"Decay mutate failed");
@@ -84,8 +82,6 @@ TEST(tuple_tests, unique_type_test)
 	{	// nested tuple, collapse to one tuple will all types
 		std::tuple<std::tuple<std::string>, cxpr::typeset<float, float>, std::tuple<unsigned int, double>> nested;
 		using nested_collapsed_t = cxpr::collapse_nested_tuple_t<decltype(nested)>;
-
-		nested_collapsed_t nst = {};
 
 		static_assert(std::is_same_v<cxpr::typeset<std::string, float, float, unsigned int, double>, nested_collapsed_t>,
 			"nested collapse failed");

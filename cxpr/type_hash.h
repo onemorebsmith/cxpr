@@ -4,6 +4,18 @@
 
 namespace cxpr
 {
+	//////////////////////////////////////////////////////////////////////////
+
+	constexpr size_t cx_strlen(const char* in) noexcept
+	{
+		const char* ptr = in;
+		while (*ptr != '\0') { ptr++; }
+
+		return ptr - in;
+	}
+
+	//////////////////////////////////////////////////////////////////////////
+
 	namespace __detail
 	{
 		//////////////////////////////////////////////////////////////////////////
@@ -35,7 +47,8 @@ namespace cxpr
 		while (*s)
 		{
 			h = (h << 4) + *s++;
-			if (high = h & 0xF0000000)
+			high = (h & 0xF0000000);
+			if (high)
 				h ^= high >> 24;
 			h &= ~high;
 		}
@@ -46,7 +59,7 @@ namespace cxpr
 	template <typename obj_t>
 	struct type_hash
 	{
-		static constexpr hash_t value = hash_typename(name_hash_v<obj_t>);
+		static constexpr hash_t value = hash_typename(name_hash_v<std::decay_t<obj_t>>);
 	};
 
 	template <typename obj_t>
