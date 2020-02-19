@@ -3,7 +3,11 @@
 Tested, built, and developed with MSVC/Clang.
 
 # Why?
-Why do at runtime what you can do at compile time; that's why. 
+- Compile time errors are easier to debug and cheaper to fix
+- Anything done during compile saves work during execution time
+- Compile-time logic tends to give the compiler more concrete information, leading to more optimized code
+- Many stl functions are not constexpr-friendly as of C++17 (fixed hopefully soon)
+- Tuples + folding = fun
 
 This library was designed to focus around manipulating types and generating code at compile-time, with a particular focus around working with tuples. Below are some examples of utilities in the library.
 
@@ -48,9 +52,9 @@ Collapse a tuple of tuples:
     using unique_collapsed_t = cxpr::tuple_unique_t<collapsed_t>
     // unique_collapsed_t = cxpr::typeset<std::string, double, float, unsigned int> 
 ```
-Or compile-time lookup table
+Compile-time lookup table
 ```cpp
-constexpr static auto lut = cxpr::make_static_map<int, const char*>({
+	constexpr static auto lut = cxpr::make_static_map<int, const char*>({
 			{ 1, "One"},
 			{ 2, "Two"},
 			{ 3, "Three"},
