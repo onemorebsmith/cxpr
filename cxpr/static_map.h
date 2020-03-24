@@ -55,24 +55,24 @@ namespace cxpr
 			}
 			else
 			{
+				//throw std::logic_error("Entry does not exist");
 				return std::make_pair(false, static_cast<const value_t*>(nullptr));
 			}
 		}
 
-		//template <key_t key>
-		//[[nodiscard]] 
-		//constexpr size_t find() const noexcept
-		//{
-		//	if constexpr (std::is_nothrow_invocable_v<find<key>>)
-		//	{
-		//		if constexpr (has_key<key>())
-		//		{
-		//			//return std::get<index_of<key>>(entries);
-		//		}
-		//	}
-		//	
-
-		//}
+		[[nodiscard]] constexpr decltype(auto) get_entry(key_t key) const noexcept
+		{
+			entry_t search = { key, {} };
+			auto found = cxpr::lower_bound(std::begin(entries), std::end(entries), search);
+			if (found->first == key)
+			{
+				return std::make_pair(true, &found->second);
+			}
+			else
+			{
+				return std::make_pair(false, static_cast<const value_t*>(nullptr));
+			}
+		}
 
 		[[nodiscard]] constexpr const value_t& operator[](const key_t& k) const
 		{
@@ -87,7 +87,6 @@ namespace cxpr
 
 	protected:
 		std::array<entry_t, max_sz> entries; // fixed_vector is overkill here, use vanilla array
-		//cxpr::fixed_vector<entry_t, max_sz> entries;
 
 		decltype(auto) getEntry(const key_t& k) const
 		{

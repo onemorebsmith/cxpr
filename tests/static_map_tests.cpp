@@ -131,26 +131,29 @@ struct table_fold_generator
 	constexpr decltype (auto) operator()()
 	{
 		using functor_t = typename dispatcher_test<int>::functor_t;
-		return cxpr::make_static_map<cxpr::hash_t, functor_t>(
+		return cxpr::make_static_map<cxpr::hash_t, functor_t>({
 			{
-				{ cxpr::typehash_v<params_t>, dispatcher_test<params_t>::generateFunctor()  }...
-			}
+				cxpr::typehash_v<params_t>, [](const void* data, std::ostream& stream)
+				{
+					stream << *(static_cast<const params_t*>(data)) << " ";
+				}
+			}... }
 		);
 	}
 };
 
 TEST(static_map_tests, functor_test_fold)
 {
-	// same as functor_test but using folds to generate the table
-	using supported_types_t = cxpr::typeset<double, int, std::string, float>;
-	constexpr static auto jump_table = cxpr::fold<table_fold_generator>(supported_types_t{});
-
-	const auto testData = std::make_tuple<int, double, float, char, std::string, 
+	const auto testData = std::make_tuple<int, double, float, char, std::string,
 		std::string, float, std::string, char>(
-		10, 12.34, -5.0f, 'b', "String1", "String2", -12.3f, "String3", 'a');
+			10, 12.34, -5.0f, 'b', "String1", "String2", -12.3f, "String3", 'a');
 
 	std::string check = "10 12.34 -5 String1 String2 -12.3 String3 ";
 	std::stringstream outStream;
+
+	// same as functor_test but using folds to generate the table
+	using supported_types_t = cxpr::typeset<double, int, std::string, float>;
+	constexpr static auto jump_table = cxpr::fold<table_fold_generator>(supported_types_t{});
 
 	cxpr::visit_tuple([&](const auto& data) constexpr
 	{
@@ -163,4 +166,22 @@ TEST(static_map_tests, functor_test_fold)
 	}, testData);
 
 	EXPECT_EQ(check, outStream.str());
+}
+
+TEST(static_map_tests, lazy_lookup_test)
+{
+	constexpr static auto lut = cxpr::make_static_map<int, const char*>(
+		{
+			{ 1, "One"},
+			{ 2, "Two"},
+			{ 3, "Three"},
+			{ 4, "Four"},
+		}
+	);
+
+
+	//constexpr auto res = lut.get_entry<1>().second;
+	//constexpr auto res1 = lut.get_entry(1).second;
+	//constexpr auto res2 = lut.get_entry<7>().second;
+	//constexpr auto res2 = lut.get_entry(7).second;
 }

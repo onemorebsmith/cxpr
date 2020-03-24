@@ -204,7 +204,14 @@ namespace cxpr
 					end = it + max_sz;
 				}
 
-				std::transform(it, end, std::begin(container), transform());
+				auto containerOut = begin();
+				while (it != end)
+				{
+					*containerOut++ = *it++;
+
+				}
+
+				//std::transform(it, end, std::begin(container), );
 				container[max_sz - 1] = '\0';
 			}
 			else // throw
@@ -266,4 +273,23 @@ namespace cxpr
 	{
 		return HashStringInvariant(n);
 	}
+
+	//////////////////////////////////////////////////////////////////////////
+
+	static constexpr char* marker_str = "marker_string is valid marker_string is valid";
+	static constexpr size_t marker_str_len = cxpr::cx_strlen(marker_str);
+	template <size_t max_sz>
+	class marker_string
+	{
+	public:
+		static constexpr fixed_string<max_sz> marker_data
+			= { std::string_view(marker_str, std::min(max_sz, marker_str_len)) };
+
+		constexpr marker_string() noexcept : str(marker_data) {}
+		constexpr bool isValid() const { return str == marker_data; }
+		constexpr void reset() { str = marker_data; }
+
+	private:
+		fixed_string<max_sz> str;
+	};
 }

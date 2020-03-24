@@ -2,18 +2,14 @@
 
 //////////////////////////////////////////////////////////////////////////
 
-#ifndef PARAM_PACK_UTILS
-#define PARAM_PACK_UTILS
-
 #define param_pack_t params_t&&...
 #define perfect_forward(pack) std::forward<decltype(pack)>(pack)...
-
-#endif
 
 //////////////////////////////////////////////////////////////////////////
 // Required library includes
 #include <algorithm>
 #include <type_traits>
+#include <variant>
 
 namespace cxpr
 {
@@ -30,6 +26,8 @@ namespace cxpr
 #include "fixed_string.h"
 #include "static_map.h"
 #include "tuple_utils.h"
+#include "variant_utils.h"
 
-#undef param_pack_t
-#undef perfect_forward
+//#undef PARAM_PACK_UTILS
+//#undef param_pack_t
+//#undef perfect_forward

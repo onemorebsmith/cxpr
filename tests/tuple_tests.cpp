@@ -26,6 +26,25 @@ TEST(tuple_tests, visit_tuple_test)
 		}, tt);
 		EXPECT_EQ(counter, 3);
 	}
+
+
+	{	// basic visit
+		std::tuple<int, double, float> tt(10, 123.456, -42);
+		std::stringstream outStream;
+		cxpr::visit_tuple([&](auto&& v)
+		{
+			outStream << v << " ";
+		}, tt);
+
+		EXPECT_EQ(outStream.str(), "10 123.456 -42 ");
+	}
+
+	{	// basic visit
+		std::tuple<int, double, std::string, char*> tt(10, 123.456, "Test", nullptr);
+		std::cout << cxpr::find_tuple_type<std::string>(tt).c_str();
+	}
+
+	// outStream = "10 123.456 -42 "
 }
 
 //////////////////////////////////////////////////////////////////////////

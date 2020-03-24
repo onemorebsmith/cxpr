@@ -39,16 +39,39 @@ namespace cxpr
 	{
 		using std::optional<T>::optional;
 
+		template <typename ... params_t>
+		std::pair<bool, T*> try_make_value(params_t&& ... params)
+		{
+			if (this->has_value() == false)
+			{
+				auto& created =	this->emplace(perfect_forward(params));
+				return std::make_pair<bool, T*>(true, &created);
+			}
+
+			return std::make_pair<bool, T*>(false, nullptr);
+		}
+
 		template <typename fun_t>
 		constexpr decltype(auto) apply(fun_t&& fun) noexcept
 		{
-			using ret_t = add_optional_t<std::invoke_result_t<fun_t, T>>;
-			if (this->has_value())
+			using fun_res_t = std::invoke_result_t < fun_t, T>;
+			if constexpr (std::is_same_v< fun_res_t, void>)
 			{
-				return ret_t{ std::invoke(fun, this->value()) };
+				if (this->has_value())
+				{
+					std::invoke(fun, this->value());
+				}
 			}
+			else
+			{
+				using ret_t = add_optional_t<std::invoke_result_t<fun_t, T>>;
+				if (this->has_value())
+				{
+					return ret_t{ std::invoke(fun, this->value()) };
+				}
 
-			return ret_t{};
+				return ret_t{};
+			}
 		}
 
 		template <typename fun_t>
