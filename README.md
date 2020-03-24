@@ -5,13 +5,16 @@ Tested, built, and developed with MSVC/Clang.
 # Why?
 - Compile time errors are easier to debug and cheaper to fix
 - Anything done during compile saves work during execution time
+- Compile-time logic tends to give the compiler more concrete information, leading to more optimized code
+- Many stl functions are not constexpr-friendly as of C++17 (fixed hopefully soon)
+- Tuples + folding = fun
 
 This library was designed to focus around manipulating types and generating code at compile-time, with a particular focus around working with tuples. Below are some examples of utilities in the library.
 
 Iterate a tuple:
 
 ```cpp
-    	std::tuple<int, double, float> tt(10, 123.456, -42);
+    std::tuple<int, double, float> tt(10, 123.456, -42);
 	cxpr::visit_tuple([&](auto&& v)
 	{
 		std::cout << v << " ";
@@ -22,7 +25,7 @@ Iterate a tuple:
 Pick a single element by type:
 
 ```cpp
-    	std::tuple<int, double, std::string, char*> tt(10, 123.456, "Test", nullptr);
+    std::tuple<int, double, std::string, char*> tt(10, 123.456, "Test", nullptr);
 	std::cout << cxpr::find_tuple_type<std::string>(tt).c_str();
 	// output: test
 	// Bonus: compile error if type isn't present
@@ -51,7 +54,7 @@ Collapse a tuple of tuples:
 ```
 Compile-time lookup table
 ```cpp
-constexpr static auto lut = cxpr::make_static_map<int, const char*>({
+	constexpr static auto lut = cxpr::make_static_map<int, const char*>({
 			{ 1, "One"},
 			{ 2, "Two"},
 			{ 3, "Three"},
@@ -74,4 +77,3 @@ constexpr static auto lut = cxpr::make_static_map<int, const char*>({
 - __tuple_utils.h__: large collection of helpers around tuples and parameter packs.
 - __type_hash.h__: implementation of a static type system built around hashing the typename during compile
 - __variadic_utils.h__:  collecton of utils around variadic templates
-
