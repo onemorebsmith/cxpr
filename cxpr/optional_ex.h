@@ -51,10 +51,13 @@ namespace cxpr
 			return std::make_pair<bool, T*>(false, nullptr);
 		}
 
+		// apply returns the result of the functor as opposed to 
+
 		template <typename fun_t>
-		constexpr decltype(auto) apply(fun_t&& fun) noexcept
+		constexpr decltype(auto) apply(fun_t&& fun) const noexcept
 		{
-			using fun_res_t = std::invoke_result_t < fun_t, T>;
+			static_assert(std::is_invocable_v<fun_t, const T&>, "apply must accept const T&, use map for modifiable value");
+			using fun_res_t = std::invoke_result_t <fun_t, T>;
 			if constexpr (std::is_same_v< fun_res_t, void>)
 			{
 				if (this->has_value())
@@ -72,6 +75,17 @@ namespace cxpr
 
 				return ret_t{};
 			}
+		}
+
+		// map implicitly expects fun_t to modify the result in-place and disregards the return value
+		template <typename fun_t>
+		constexpr decltype(auto) map(fun_t&& fun) noexcept
+		{
+			if (this->has_value())
+			{
+				std::invoke(fun, this->value());
+			}
+			return *this;
 		}
 
 		template <typename fun_t>
