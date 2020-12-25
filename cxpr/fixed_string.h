@@ -274,6 +274,15 @@ namespace cxpr
 		return HashStringInvariant(n);
 	}
 
+#include <xmmintrin.h>
+
+	static constexpr bool fast_compare32(const char* l, const char* r)
+	{
+		const __int64* li = (const __int64*)l;
+		const __int64* ri = (const __int64*)r;
+		return (li[0] == ri[0]) && (li[1] == ri[1]) && (li[2] == ri[2]) && (li[3] == ri[3]);
+	}
+
 	//////////////////////////////////////////////////////////////////////////
 
 	static constexpr char* marker_str = "marker_string is valid marker_string is valid";
@@ -282,12 +291,23 @@ namespace cxpr
 	class marker_string
 	{
 	public:
-		static constexpr fixed_string<max_sz> marker_data
+		static constexpr size_t marker_sz = std::min(max_sz, marker_str_len);
+		static constexpr fixed_string<marker_sz> marker_data
 			= { std::string_view(marker_str, std::min(max_sz, marker_str_len)) };
 
 		constexpr marker_string() noexcept : str(marker_data) {}
-		constexpr bool isValid() const { return str == marker_data; }
-		constexpr void reset() { str = marker_data; }
+		constexpr bool isValid() const 
+		{ 
+			if constexpr (marker_sz == 32)
+			{
+				return fast_compare32((const char*)&marker_data, (const char*)&str);
+			}
+			else
+			{
+				return memcmp(&str, &marker_data, sizeof(marker_data)) == 0;
+			}
+		}
+		constexpr void reset() { memcpy(&str, &marker_data, sizeof(marker_data)); }
 
 	private:
 		fixed_string<max_sz> str;
