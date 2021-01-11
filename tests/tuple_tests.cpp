@@ -29,7 +29,7 @@ TEST(tuple_tests, visit_tuple_test)
 
 
 	{	// basic visit
-		std::tuple<int, double, float> tt(10, 123.456, -42);
+		std::tuple<int, double, float> tt(10, 123.456, -42.f);
 		std::stringstream outStream;
 		cxpr::visit_tuple([&](auto&& v)
 		{

@@ -21,43 +21,43 @@ TEST(fixed_string_tests, char_constructor_tests)
 		EXPECT_EQ(ss.size(), cppStr.size());
 	}
 
-	{	// upper transform
-		auto ss = cxpr::make_fixed_string<cxpr::upper_case>("stRings are COOL 12345 %@$%");
-		std::string cppStr = "STRINGS ARE COOL 12345 %@$%";
-		EXPECT_EQ(ss, cppStr);
-		EXPECT_EQ(ss.size(), cppStr.size());
-	}
+	//{	// upper transform
+	//	auto ss = cxpr::make_fixed_string<cxpr::upper_case>("stRings are COOL 12345 %@$%");
+	//	std::string cppStr = "STRINGS ARE COOL 12345 %@$%";
+	//	EXPECT_EQ(ss, cppStr);
+	//	EXPECT_EQ(ss.size(), cppStr.size());
+	//}
 
-	{	// custom transform
-		struct minus_one { constexpr char operator()(char in) const noexcept { return in - 1; } };
+	//{	// custom transform
+	//	struct minus_one { constexpr char operator()(char in) const noexcept { return in - 1; } };
 
-		auto ss = cxpr::make_fixed_string<minus_one>("stRings ARE COOL 12345 %@$%");
-		std::string cppStr = "stRings ARE COOL 12345 %@$%";
-		for (auto& it : cppStr)
-		{
-			it--;
-		}
-		EXPECT_EQ(ss, cppStr);
-		EXPECT_EQ(ss.size(), cppStr.size());
-	}
+	//	auto ss = cxpr::make_fixed_string<minus_one>("stRings ARE COOL 12345 %@$%");
+	//	std::string cppStr = "stRings ARE COOL 12345 %@$%";
+	//	for (auto& it : cppStr)
+	//	{
+	//		it--;
+	//	}
+	//	EXPECT_EQ(ss, cppStr);
+	//	EXPECT_EQ(ss.size(), cppStr.size());
+	//}
 
-	{ // udl constructors
-		using namespace cxpr;
-		const auto ss = "stRings ARE COOL 12345 %@$%"_fstr32;
-		static_assert(sizeof(ss) == 32, "unexpected size, should be 32 bytes");
-		std::string cppStr = "stRings ARE COOL 12345 %@$%";
-		EXPECT_EQ(ss, cppStr);
-		EXPECT_EQ(ss.size(), cppStr.size());
-	}
+	//{ // udl constructors
+	//	using namespace cxpr;
+	//	const auto ss = "stRings ARE COOL 12345 %@$%"_fstr32;
+	//	static_assert(sizeof(ss) == 32, "unexpected size, should be 32 bytes");
+	//	std::string cppStr = "stRings ARE COOL 12345 %@$%";
+	//	EXPECT_EQ(ss, cppStr);
+	//	EXPECT_EQ(ss.size(), cppStr.size());
+	//}
 
-	{ // udl constructors
-		using namespace cxpr;
-		const auto ss = "stRings ARE COOL 12345 %@$%"_fstr256;
-		static_assert(sizeof(ss) == 256, "unexpected size, should be 256 bytes");
-		std::string cppStr = "stRings ARE COOL 12345 %@$%";
-		EXPECT_EQ(ss, cppStr);
-		EXPECT_EQ(ss.size(), cppStr.size());
-	}
+	//{ // udl constructors
+	//	using namespace cxpr;
+	//	const auto ss = "stRings ARE COOL 12345 %@$%"_fstr256;
+	//	static_assert(sizeof(ss) == 256, "unexpected size, should be 256 bytes");
+	//	std::string cppStr = "stRings ARE COOL 12345 %@$%";
+	//	EXPECT_EQ(ss, cppStr);
+	//	EXPECT_EQ(ss.size(), cppStr.size());
+	//}
 }
 
 TEST(fixed_string_tests, wchar_constructor_tests)

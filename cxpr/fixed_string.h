@@ -207,11 +207,9 @@ namespace cxpr
 				auto containerOut = begin();
 				while (it != end)
 				{
-					*containerOut++ = *it++;
+					*containerOut++ = transform{}(*it++);
 
 				}
-
-				//std::transform(it, end, std::begin(container), );
 				container[max_sz - 1] = '\0';
 			}
 			else // throw
