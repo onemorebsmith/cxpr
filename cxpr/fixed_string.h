@@ -60,7 +60,7 @@ namespace cxpr
 		return ret;
 	}
 
-	[[nodiscard]] constexpr cxpr::hash_t HashStringInvariant(std::string_view in) noexcept
+	[[nodiscard]] constexpr cxpr::hash_t hash_invariant(std::string_view in) noexcept
 	{
 		if (in.size() == 0)
 		{
@@ -114,13 +114,20 @@ namespace cxpr
 	struct overrun_behavior_trunc {};
 	struct overrun_behavior_throw {};
 
+	//////////////////////////////////////////////////////////////////////////
+	// AFAIK these aren't defined anywhere in the stl, that'd sure be nice though
 	template <typename data_t> struct str_terminator;
 	template <> struct str_terminator<char> { static constexpr char value() { return '\0'; } };
 	template <> struct str_terminator<wchar_t> { static constexpr wchar_t value() { return L'\0'; } };
 	template <> struct str_terminator<char16_t> { static constexpr wchar_t value() { return char16_t{}; } }; // is this right?
 
 	//////////////////////////////////////////////////////////////////////////
-
+	// Implementation of a fixed-size string buffer. 
+	// The contained string will always be null-terminated and can be [0, max_capacity) in length
+	// The string is guaranteed to be contiguous in memory and uses std::array as the underlying container
+	// For small strings (ie the size can be indexed by a single data_t) the implementation will use
+	// indexing for push_back/emplace/size/etc. Larger strings will function similar to a const char* and
+	// use a linear search for the the terminator character to determine size 
 	template <typename data_t,
 		size_t max_capacity,
 		typename transform = no_transform,
@@ -146,8 +153,8 @@ namespace cxpr
 		using reverse_iterator = typename container_t::reverse_iterator;
 		using const_reverse_iterator = typename container_t::const_reverse_iterator;
 
-		static constexpr bool throw_on_overrun = std::is_same_v<overrun_behavior, overrun_behavior_throw>;
-		static constexpr bool trunc_on_overrun = std::is_same_v<overrun_behavior, overrun_behavior_trunc>;
+		static constexpr bool throw_on_overrun = std::is_same_v<std::decay_t<overrun_behavior>, overrun_behavior_throw>;
+		static constexpr bool trunc_on_overrun = std::is_same_v<std::decay_t<overrun_behavior> , overrun_behavior_trunc>;
 		static constexpr data_t terminator_value = str_terminator<data_t>::value();
 
 		// If 'use_emplace_indexed' is true, then the final character will be used as a 1-based index into the container
@@ -155,7 +162,7 @@ namespace cxpr
 		// The index is 1-base as opposed to 0-base b/c a size of 0 would also indicate the terminated value for char '\0'
 		static constexpr bool use_emplace_indexed = std::numeric_limits<data_t>::max() >= max_capacity;
 
-		constexpr basic_fixed_string()									noexcept : container{}, terminator{terminator_value}{
+		constexpr basic_fixed_string()					noexcept : container{}, terminator{terminator_value}{
 			if constexpr (use_emplace_indexed) { terminator = 1; }
 		}
 		constexpr basic_fixed_string(const my_t& other) noexcept : container(other.container), terminator{ other.terminator } {}
@@ -167,8 +174,8 @@ namespace cxpr
 
 		constexpr const_pointer c_str() const noexcept { return &container[0]; }
 		constexpr const_pointer data() const noexcept { return &container[0]; }
-		[[nodiscard]] constexpr cxpr::hash_t hash_code() const noexcept { return HashStringInvariant(&container[0]); }
-		[[nodiscard]] constexpr cxpr::hash_t hash()		 const noexcept { return HashStringInvariant(&container[0]); }
+		[[nodiscard]] constexpr cxpr::hash_t hash_code() const noexcept { return hash_invariant(&container[0]); }
+		[[nodiscard]] constexpr cxpr::hash_t hash()		 const noexcept { return hash_invariant(&container[0]); }
 		[[nodiscard]] constexpr bool operator<(const my_t& other) const noexcept
 		{
 			const size_t sz = std::min(size(), other.size());
@@ -206,7 +213,7 @@ namespace cxpr
 
 		constexpr decltype(auto) begin() noexcept { return container.begin(); }
 		constexpr decltype(auto) begin() const noexcept { return container.begin(); }
-		constexpr decltype(auto) end()	 noexcept { return container.end(); }
+		constexpr decltype(auto) end()	 noexcept { return container.end() + size(); }
 		constexpr decltype(auto) end()	 const noexcept { return container.begin() + size(); }
 		constexpr size_t capacity() const noexcept { return max_sz; }
 		constexpr size_t size()			 const noexcept { 
@@ -214,7 +221,7 @@ namespace cxpr
 				if (terminator == terminator_value){
 					return max_sz;
 				}
-				return terminator - 1;
+				return static_cast<size_t>(terminator) - 1;
 			}
 			else
 			{
@@ -247,25 +254,35 @@ namespace cxpr
 			return equal;
 		}
 
+		void push_back(const data_t& _Val) {
+			emplace_back(_Val);
+		}
+
 		void push_back(data_t&& _Val) {
 			emplace_back(_STD move(_Val));
 		}
 
-		void emplace_back_indexed(data_t&& _Val) {
+		template <class val_t>
+		void emplace_back_indexed(val_t&& _Val) {
 			if (terminator == terminator_value){
-				// pool is full, go home
+				if constexpr (throw_on_overrun) {
+					throw std::runtime_error("string too small for contents, aborting assignment");
+				}
+
+				// pools closed, go home
 				return;
 			}
 
 			// indexed
-			container[static_cast<size_t>(terminator -1)] = std::move(_Val);
+			container[static_cast<size_t>(terminator) -1] = std::move(_Val);
 			terminator++;
-			if (terminator > max_capacity){
+			if (terminator >= max_capacity){
 				terminator = terminator_value;
 			}
 		}
 
-		void emplace_back(data_t&& _Val) {
+		template <class val_t>
+		void emplace_back(val_t&& _Val) {
 
 			if constexpr (use_emplace_indexed) {
 				// we're small enough to use the end value as an index
@@ -273,7 +290,7 @@ namespace cxpr
 			}
 			else {	// traditional iterate and check vs null terminator
 				auto it = &container[0];
-				auto endIt = &container[max_sz-1];
+				auto endIt = &terminator;
 				while(it != endIt){
 					if (*it == terminator){
 						*it = std::move(_Val);
@@ -281,7 +298,14 @@ namespace cxpr
 						(++it) = terminator_value;
 						break;
 					}
-					++it;	
+					++it;
+				}
+
+				if constexpr (throw_on_overrun) {
+					if (it == endIt) {
+						// failed to set
+						throw std::runtime_error("string too small for contents, aborting assignment");
+					}
 				}
 			}
 		}
@@ -368,19 +392,19 @@ namespace cxpr
 
 	//////////////////////////////////////////////////////////////////////////
 
-	constexpr decltype(auto) operator"" _fstr32(const char* n, size_t sz)
+	constexpr decltype(auto) operator"" _fixed32(const char* n, size_t sz)
 	{
 		return fixed_string<32>(n);
 	}
 
-	constexpr decltype(auto) operator"" _fstr256(const char* n, size_t sz)
+	constexpr decltype(auto) operator"" _fixed256(const char* n, size_t sz)
 	{
 		return fixed_string<256>(n);
 	}
 
 	constexpr cxpr::hash_t operator"" _hash(const char* n, size_t sz)
 	{
-		return HashStringInvariant(n);
+		return hash_invariant(n);
 	}
 
 	//////////////////////////////////////////////////////////////////////////

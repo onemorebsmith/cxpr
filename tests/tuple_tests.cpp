@@ -27,7 +27,6 @@ TEST(tuple_tests, visit_tuple_test)
 		EXPECT_EQ(counter, 3);
 	}
 
-
 	{	// basic visit
 		std::tuple<int, double, float> tt(10, 123.456, -42.f);
 		std::stringstream outStream;
@@ -39,12 +38,20 @@ TEST(tuple_tests, visit_tuple_test)
 		EXPECT_EQ(outStream.str(), "10 123.456 -42 ");
 	}
 
-	{	// basic visit
-		std::tuple<int, double, std::string, char*> tt(10, 123.456, "Test", nullptr);
-		std::cout << cxpr::find_tuple_type<std::string>(tt).c_str();
+	{	// select each type one at a time
+		std::tuple<int, double, std::string, const char*> tt(10, 123.456, "Test", nullptr);
+		EXPECT_EQ(cxpr::first_match<int>(tt), 10);
+		EXPECT_DOUBLE_EQ(cxpr::first_match<double>(tt), 123.456);
+		EXPECT_EQ(cxpr::first_match<std::string>(tt), "Test");
+		EXPECT_EQ(cxpr::first_match<const char*>(tt), nullptr);
 	}
 
-	// outStream = "10 123.456 -42 "
+	{	// select, modify, & compare
+		std::tuple<int, double, std::string, const char*> tt(10, 123.456, "Test", nullptr);
+		EXPECT_EQ(cxpr::first_match<std::string>(tt), "Test");
+		cxpr::first_match<std::string>(tt) = "modified";
+		EXPECT_EQ(cxpr::first_match<std::string>(tt), "modified");
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -60,15 +67,27 @@ TEST(tuple_tests, visit_tuple_pack_test)
 		EXPECT_EQ(std::tuple_size_v<decltype(res)>, 3);
 	}
 
-	//{	// rvalue visit
-	//	std::tuple<const int, double&&, float&&> tt(10, 123.456, -69.0f);
-	//	auto counter = 0;
-	//	cxpr::visit_tuple([&](auto& val)
-	//	{
-	//		counter++;
-	//	}, tt);
-	//	EXPECT_EQ(counter, 3);
-	//}
+	{	// rvalue visit
+		std::tuple<const int, double&&, float&&> tt(10, 123.456, -69.0f);
+		auto counter = 0;
+		cxpr::visit_tuple([&](auto& val)
+		{
+			counter++;
+		}, tt);
+		EXPECT_EQ(counter, 3);
+	}
+
+	{	// modify visit
+		std::tuple<int, double&&, float&&> tt(10, 123.456, -69.0f);
+		cxpr::visit_tuple([&](auto& val)
+			{
+				val++;
+			}, tt);
+
+		EXPECT_EQ(std::get<0>(tt), 11);
+		EXPECT_DOUBLE_EQ(std::get<1>(tt), 124.456);
+		EXPECT_FLOAT_EQ(std::get<2>(tt), -68.0f);
+	}
 }
 
 template <typename inner_t>
@@ -82,6 +101,7 @@ using un_mutator = typename T::inner_type;
 
 TEST(tuple_tests, unique_type_test)
 {
+	// everything below should just fail to compile if the test 'fails'
 	std::tuple<int, double, double, char, std::string, std::string, double, char> tt;
 	using uniq_params_t = cxpr::unique_types_t<int, double, double, char, std::string, std::string, double, char>;
 	using uniq_tuple_t = cxpr::tuple_unique_t<decltype(tt)>;

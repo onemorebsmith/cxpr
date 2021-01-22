@@ -75,11 +75,11 @@ namespace cxpr
 	}
 
 	/////////////////////////////////////////////////////////////////////////
-	// find_first_tuple
+	// first_match
 	// Returns the first type in the tuple that exactly matches type_t (internal tuple type will be decayed)
 	// If no types match, this will force a compiler error
 	template<typename type_t, typename tuple_t>
-	constexpr decltype(auto) find_tuple_type(tuple_t&& tt) noexcept
+	constexpr decltype(auto) first_match(tuple_t&& tt) noexcept
 	{
 		return __detail::_find_tuple_type<type_t, tuple_t, 0>(tt);
 	}
