@@ -10,6 +10,14 @@ namespace cxpr
 		static constexpr char_t offset_v = char_t('Z') - char_t('z');
 	}
 
+	template <typename data_t,
+		size_t max_sz,
+		typename transform,
+		typename overrun_behavior>
+		class basic_fixed_string;
+
+	// transforms
+
 	template <typename char_t>
 	[[nodiscard]] constexpr char_t cx_tolower(char_t in) noexcept
 	{
@@ -30,6 +38,26 @@ namespace cxpr
 		}
 
 		return in;
+	}
+
+
+	template <typename out_t>
+	[[nodiscard]] constexpr decltype(auto) to_lower(std::string_view in) noexcept
+	{
+		out_t ret{};
+		std::transform(std::begin(in), std::end(in), std::back_inserter(ret), std::tolower);
+		return ret;
+	}
+
+	template <typename data_t,
+		size_t max_sz,
+		typename transform,
+		typename overrun_behavior>
+		[[nodiscard]] constexpr decltype(auto) to_lower(const basic_fixed_string<data_t, max_sz, transform, overrun_behavior>& in) noexcept
+	{
+		basic_fixed_string<data_t, max_sz, transform, overrun_behavior> ret{};
+		std::transform(std::begin(in), std::end(in), std::back_inserter(ret), std::tolower);
+		return ret;
 	}
 
 	[[nodiscard]] constexpr cxpr::hash_t HashStringInvariant(std::string_view in) noexcept
@@ -86,18 +114,26 @@ namespace cxpr
 	struct overrun_behavior_trunc {};
 	struct overrun_behavior_throw {};
 
+	template <typename data_t> struct str_terminator;
+	template <> struct str_terminator<char> { static constexpr char value() { return '\0'; } };
+	template <> struct str_terminator<wchar_t> { static constexpr wchar_t value() { return L'\0'; } };
+	template <> struct str_terminator<char16_t> { static constexpr wchar_t value() { return char16_t{}; } }; // is this right?
+
 	//////////////////////////////////////////////////////////////////////////
 
 	template <typename data_t,
-		size_t max_sz,
+		size_t max_capacity,
 		typename transform = no_transform,
 		typename overrun_behavior = overrun_behavior_trunc>
 		class basic_fixed_string
 	{
 	public:
+		// -1 since it doesn't contain the null
+		static constexpr size_t max_sz = max_capacity - 1;
+
 		using traits_t = std::char_traits<data_t>;
 		using container_t = std::array<data_t, max_sz>;
-		using my_t = basic_fixed_string<data_t, max_sz, transform, overrun_behavior>;
+		using my_t = basic_fixed_string<data_t, max_capacity, transform, overrun_behavior>;
 		using value_type = typename container_t::value_type;
 		using size_type = typename container_t::size_type;
 		using difference_type = typename container_t::difference_type;
@@ -112,10 +148,18 @@ namespace cxpr
 
 		static constexpr bool throw_on_overrun = std::is_same_v<overrun_behavior, overrun_behavior_throw>;
 		static constexpr bool trunc_on_overrun = std::is_same_v<overrun_behavior, overrun_behavior_trunc>;
+		static constexpr data_t terminator_value = str_terminator<data_t>::value();
 
-		constexpr basic_fixed_string()									noexcept : container{} {}
-		constexpr basic_fixed_string(const basic_fixed_string& other) noexcept : container(other.container) {}
-		constexpr basic_fixed_string(basic_fixed_string&& other)		noexcept : container(other.container) {}
+		// If 'use_emplace_indexed' is true, then the final character will be used as a 1-based index into the container
+		// This eliminates linear searching for size/emplace/push_back and replaces them with the approprate indexed operations
+		// The index is 1-base as opposed to 0-base b/c a size of 0 would also indicate the terminated value for char '\0'
+		static constexpr bool use_emplace_indexed = std::numeric_limits<data_t>::max() >= max_capacity;
+
+		constexpr basic_fixed_string()									noexcept : container{}, terminator{terminator_value}{
+			if constexpr (use_emplace_indexed) { terminator = 1; }
+		}
+		constexpr basic_fixed_string(const my_t& other) noexcept : container(other.container), terminator{ other.terminator } {}
+		constexpr basic_fixed_string(my_t&& other)		noexcept : container(other.container), terminator{ other.terminator } {}
 		constexpr basic_fixed_string(const std::basic_string_view<data_t> str) noexcept : container{}
 		{
 			assign(str.begin(), str.cend());
@@ -156,17 +200,35 @@ namespace cxpr
 		constexpr my_t& operator=(
 			const basic_fixed_string<data_t, max_sz, other_transform_t, other_overrun_t>& other) noexcept
 		{
-			assign(other.begin(), other.end());
+			assign(other.begin(), other.begin() + other.size());
 			return *this;
 		}
 
-		constexpr void clear()			 noexcept { container.clear(); }
 		constexpr decltype(auto) begin() noexcept { return container.begin(); }
 		constexpr decltype(auto) begin() const noexcept { return container.begin(); }
 		constexpr decltype(auto) end()	 noexcept { return container.end(); }
-		constexpr decltype(auto) end()	 const noexcept { return container.end(); }
-		constexpr size_t size()			 const noexcept { return traits_t::length(data()); }
+		constexpr decltype(auto) end()	 const noexcept { return container.begin() + size(); }
 		constexpr size_t capacity() const noexcept { return max_sz; }
+		constexpr size_t size()			 const noexcept { 
+			if constexpr (use_emplace_indexed) {
+				if (terminator == terminator_value){
+					return max_sz;
+				}
+				return terminator - 1;
+			}
+			else
+			{
+				return traits_t::length(data());
+			}
+		}
+		constexpr void clear() {
+			for (auto& it : container) {
+				it = terminator_value;
+			}
+			if constexpr (use_emplace_indexed) {
+				terminator = 1;
+			}
+		}
 
 		constexpr operator std::basic_string_view<data_t>() const
 		{
@@ -185,16 +247,59 @@ namespace cxpr
 			return equal;
 		}
 
+		void push_back(data_t&& _Val) {
+			emplace_back(_STD move(_Val));
+		}
+
+		void emplace_back_indexed(data_t&& _Val) {
+			if (terminator == terminator_value){
+				// pool is full, go home
+				return;
+			}
+
+			// indexed
+			container[static_cast<size_t>(terminator -1)] = std::move(_Val);
+			terminator++;
+			if (terminator > max_capacity){
+				terminator = terminator_value;
+			}
+		}
+
+		void emplace_back(data_t&& _Val) {
+
+			if constexpr (use_emplace_indexed) {
+				// we're small enough to use the end value as an index
+				emplace_back_indexed(std::move(_Val));
+			}
+			else {	// traditional iterate and check vs null terminator
+				auto it = &container[0];
+				auto endIt = &container[max_sz-1];
+				while(it != endIt){
+					if (*it == terminator){
+						*it = std::move(_Val);
+						// overrun the end iterator is fine since it's a data_t and already '\0'
+						(++it) = terminator_value;
+						break;
+					}
+					++it;	
+				}
+			}
+		}
+
 	private:
+		// Memory layout, we don't expose the terminator value to the user and forcefully set it during creation
+		// this is possible b/c the end value can only ever be '\0' due to strings always having to be null terminated
 		union
 		{
-			const data_t debug[max_sz];
+			const data_t debug[max_sz - 1];
 			container_t container;
 		};
+		data_t terminator = terminator_value; // not const since we might index with it
 
 		template <typename iterator_t>
 		constexpr void assign(iterator_t it, iterator_t end)
 		{
+			clear();
 			auto distance = std::distance(it, end);
 
 			if constexpr (trunc_on_overrun)
@@ -208,9 +313,15 @@ namespace cxpr
 				while (it != end)
 				{
 					*containerOut++ = transform{}(*it++);
-
 				}
-				container[max_sz - 1] = '\0';
+
+				if constexpr (use_emplace_indexed) {
+					const auto newLen = std::min(static_cast<size_t>(distance), static_cast<size_t>(max_sz));
+					terminator = static_cast<decltype(terminator)>(newLen) + 1; // index can't start at 0 since that's '\0'
+					if (distance >= max_sz){
+						terminator = terminator_value;
+					}
+				}
 			}
 			else // throw
 			{
@@ -272,15 +383,6 @@ namespace cxpr
 		return HashStringInvariant(n);
 	}
 
-#include <xmmintrin.h>
-
-	static constexpr bool fast_compare32(const char* l, const char* r)
-	{
-		const __int64* li = (const __int64*)l;
-		const __int64* ri = (const __int64*)r;
-		return (li[0] == ri[0]) && (li[1] == ri[1]) && (li[2] == ri[2]) && (li[3] == ri[3]);
-	}
-
 	//////////////////////////////////////////////////////////////////////////
 
 	static constexpr char* marker_str = "marker_string is valid marker_string is valid";
@@ -289,25 +391,21 @@ namespace cxpr
 	class marker_string
 	{
 	public:
-		static constexpr size_t marker_sz = std::min(max_sz, marker_str_len);
-		static constexpr fixed_string<marker_sz> marker_data
+		static constexpr fixed_string<max_sz> marker_data
 			= { std::string_view(marker_str, std::min(max_sz, marker_str_len)) };
 
 		constexpr marker_string() noexcept : str(marker_data) {}
-		constexpr bool isValid() const 
-		{ 
-			if constexpr (marker_sz == 32)
-			{
-				return fast_compare32((const char*)&marker_data, (const char*)&str);
-			}
-			else
-			{
-				return memcmp(&str, &marker_data, sizeof(marker_data)) == 0;
-			}
-		}
-		constexpr void reset() { memcpy(&str, &marker_data, sizeof(marker_data)); }
+		constexpr bool isValid() const { return str == marker_data; }
+		constexpr void reset() { str = marker_data; }
 
 	private:
 		fixed_string<max_sz> str;
 	};
+
+	template <typename ... T>
+	std::ostream& operator<<(std::ostream& os, const basic_fixed_string<T...>& str)
+	{
+		os << "test"
+		return os;
+	}
 }
