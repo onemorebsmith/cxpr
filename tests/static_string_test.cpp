@@ -21,43 +21,43 @@ TEST(fixed_string_tests, char_constructor_tests)
 		EXPECT_EQ(ss.size(), cppStr.size());
 	}
 
-	//{	// upper transform
-	//	auto ss = cxpr::make_fixed_string<cxpr::upper_case>("stRings are COOL 12345 %@$%");
-	//	std::string cppStr = "STRINGS ARE COOL 12345 %@$%";
-	//	EXPECT_EQ(ss, cppStr);
-	//	EXPECT_EQ(ss.size(), cppStr.size());
-	//}
+	{	// upper transform
+		auto ss = cxpr::make_fixed_string<cxpr::upper_case>("stRings are COOL 12345 %@$%");
+		std::string cppStr = "STRINGS ARE COOL 12345 %@$%";
+		EXPECT_EQ(ss, cppStr);
+		EXPECT_EQ(ss.size(), cppStr.size());
+	}
 
-	//{	// custom transform
-	//	struct minus_one { constexpr char operator()(char in) const noexcept { return in - 1; } };
+	{	// custom transform
+		struct minus_one { constexpr char operator()(char in) const noexcept { return in - 1; } };
 
-	//	auto ss = cxpr::make_fixed_string<minus_one>("stRings ARE COOL 12345 %@$%");
-	//	std::string cppStr = "stRings ARE COOL 12345 %@$%";
-	//	for (auto& it : cppStr)
-	//	{
-	//		it--;
-	//	}
-	//	EXPECT_EQ(ss, cppStr);
-	//	EXPECT_EQ(ss.size(), cppStr.size());
-	//}
+		auto ss = cxpr::make_fixed_string<minus_one>("stRings ARE COOL 12345 %@$%");
+		std::string cppStr = "stRings ARE COOL 12345 %@$%";
+		for (auto& it : cppStr)
+		{
+			it--;
+		}
+		EXPECT_EQ(ss, cppStr);
+		EXPECT_EQ(ss.size(), cppStr.size());
+	}
 
-	//{ // udl constructors
-	//	using namespace cxpr;
-	//	const auto ss = "stRings ARE COOL 12345 %@$%"_fstr32;
-	//	static_assert(sizeof(ss) == 32, "unexpected size, should be 32 bytes");
-	//	std::string cppStr = "stRings ARE COOL 12345 %@$%";
-	//	EXPECT_EQ(ss, cppStr);
-	//	EXPECT_EQ(ss.size(), cppStr.size());
-	//}
+	{ // udl constructors
+		using namespace cxpr;
+		const auto ss = "stRings ARE COOL 12345 %@$%"_fixed32;
+		static_assert(sizeof(ss) == 32, "unexpected size, should be 32 bytes");
+		std::string cppStr = "stRings ARE COOL 12345 %@$%";
+		EXPECT_EQ(ss, cppStr);
+		EXPECT_EQ(ss.size(), cppStr.size());
+	}
 
-	//{ // udl constructors
-	//	using namespace cxpr;
-	//	const auto ss = "stRings ARE COOL 12345 %@$%"_fstr256;
-	//	static_assert(sizeof(ss) == 256, "unexpected size, should be 256 bytes");
-	//	std::string cppStr = "stRings ARE COOL 12345 %@$%";
-	//	EXPECT_EQ(ss, cppStr);
-	//	EXPECT_EQ(ss.size(), cppStr.size());
-	//}
+	{ // udl constructors
+		using namespace cxpr;
+		const auto ss = "stRings ARE COOL 12345 %@$%"_fixed256;
+		static_assert(sizeof(ss) == 256, "unexpected size, should be 256 bytes");
+		std::string cppStr = "stRings ARE COOL 12345 %@$%";
+		EXPECT_EQ(ss, cppStr);
+		EXPECT_EQ(ss.size(), cppStr.size());
+	}
 }
 
 TEST(fixed_string_tests, wchar_constructor_tests)
@@ -193,9 +193,82 @@ TEST(fixed_string_tests, char_manipulation)
 		auto ss2 = cxpr::to_lower(ss1);
 		EXPECT_EQ(ss2, "random data 1234");
 	}
-	//{	// fixed to cpp str
-	//	auto ss1 = cxpr::make_fixed_string<std::string>("RANdom Data 1234");
-	//	auto ss2 = cxpr::to_lower(ss1);
-	//	EXPECT_EQ(ss2, "random data 1234");
-	//}
+	{	// fixed to cpp str
+		auto ss1 = cxpr::make_fixed_string("RANdom Data 1234");
+		auto ss2 = cxpr::to_lower<std::string>(ss1);
+		EXPECT_EQ(ss2, "random data 1234");
+	}
+}
+
+TEST(fixed_string_tests, push_back)
+{
+	{	// push_back assign long
+		auto ss1 = cxpr::fixed_string<1024>();
+		for (auto it : large_data) {
+			ss1.push_back(it);
+		}
+		EXPECT_EQ(ss1, large_data);
+	}
+
+	{	// push_back assign long, overflow w/ trunc
+		auto ss1 = cxpr::fixed_string<1024, cxpr::no_transform, cxpr::overrun_behavior_trunc>();
+		for (auto it : large_data) {
+			ss1.push_back(it);
+		}
+
+		// this should overflow
+		for (auto it : large_data) {
+			ss1.push_back(it);
+		}
+
+		EXPECT_EQ(ss1, large_data);
+	}
+
+	{	// push_back assign long, overflow w/ throw
+		auto ss1 = cxpr::fixed_string<1024, cxpr::no_transform, cxpr::overrun_behavior_throw>();
+		for (auto it : large_data) {
+			ss1.push_back(it);
+		}
+
+		// this should overflow & throw
+		EXPECT_THROW({
+			for (auto it : large_data) {
+				ss1.push_back(it);
+			}
+		}, std::runtime_error);
+	}
+
+	{	// push_back assign short, overflow w/ throw
+		auto ss1 = cxpr::fixed_string<32, cxpr::no_transform, cxpr::overrun_behavior_throw>();
+		EXPECT_THROW({
+			for (auto it : large_data) {
+				ss1.push_back(it);
+			}
+			}, std::runtime_error);
+	}
+
+	{	// push_back assign short
+		auto ss1 = cxpr::fixed_string<32>();
+		for (auto it : large_data_first_32) {
+			ss1.push_back(it);
+		}
+		EXPECT_EQ(ss1, large_data_first_32);
+	}
+
+	{	// push_back assign short, overflow w/ trunc
+		auto ss1 = cxpr::fixed_string<32, cxpr::no_transform, cxpr::overrun_behavior_trunc>();
+		for (auto it : large_data) {
+			ss1.push_back(it);
+		}
+		EXPECT_EQ(ss1, large_data_first_32);
+	}
+
+	{	// push_back assign short, overflow w/ throw
+		auto ss1 = cxpr::fixed_string<32, cxpr::no_transform, cxpr::overrun_behavior_throw>();
+		EXPECT_THROW({
+			for (auto it : large_data) {
+				ss1.push_back(it);
+			}
+		}, std::runtime_error);
+	}
 }
