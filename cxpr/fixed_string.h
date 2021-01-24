@@ -45,7 +45,15 @@ namespace cxpr
 	[[nodiscard]] constexpr decltype(auto) to_lower(std::string_view in) noexcept
 	{
 		out_t ret{};
-		std::transform(std::begin(in), std::end(in), std::back_inserter(ret), std::tolower);
+		std::transform(std::begin(in), std::end(in), std::back_inserter(ret), cx_tolower<char>);
+		return ret;
+	}
+
+	template <typename out_t>
+	[[nodiscard]] constexpr decltype(auto) to_upper(std::string_view in) noexcept
+	{
+		out_t ret{};
+		std::transform(std::begin(in), std::end(in), std::back_inserter(ret), cx_toupper<char>);
 		return ret;
 	}
 
